@@ -1,4 +1,5 @@
 import socket
+import threading
 
 KNOWN_SERVICES = {
     21: "FTP",
@@ -32,57 +33,64 @@ def analyze_service(ip, port, host):
 
 
 
+def scan_one_port(ip, port, host, results, lock):
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sock.settimeout(2)
+
+    result = sock.connect_ex((ip, port))
+
+    if result == 0:
+        service = KNOWN_SERVICES.get(port, "Unknown")
+        print(f"[OPEN] {port} ({service})")
+
+        with lock:
+            results.append({"port": port, "status": "open", "service": service})
+        analyze_service(ip, port, host)
+
+    else:
+        print(f"[CLOSED/FILTERED] {port}")
+        with lock:
+            results.append({"port": port, "status": "closed/filtered", "service": None})
+
+    sock.close()
+
+
+
 def scan_ports(ip, host, ports):
-
-    
-    http_found = False
-    results= []
-    
-
+    results = []
+    lock = threading.Lock()
 
     print("\n======================")
     print("Port Scan")
     print("======================")
 
-
-
+    threads = []
     for port in ports:
-        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        sock.settimeout(2)
+        t = threading.Thread(target=scan_one_port, args=(ip, port, host, results, lock))
+        threads.append(t)
+        t.start()
 
-        result = sock.connect_ex((ip, port))
-
-        if result == 0:
-            service = KNOWN_SERVICES.get(port, "Unknown")
-            print(f"[OPEN] {port} ({service})")
-
-            
-            results.append({"port": port, "status": "open", "service": service})
-
-
-
-
-            service_result = analyze_service(ip, port, host)
-            
-
-            if service_result == "http":
-                http_found = True
-
-        
-        else:
-            print(f"[CLOSED/FILTERED] {port}")
-            results.append({"port": port, "status": "closed/filtered", "service": None})
-
-        sock.close()
-
-        
-
+    for t in threads:
+        t.join()
     print("\nPort scan complete.")
+
+    http_found = any(r["port"] == 80 and r["status"] == "open" for r in results)
 
     if http_found:
         print("\n======================")
         print("HTTP Analysis")
         print("======================")
-
         http_request(ip, 80, host)
+
+    
+
     return results
+
+
+
+    
+
+
+  
+
+
