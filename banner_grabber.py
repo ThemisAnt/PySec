@@ -15,15 +15,13 @@ def grab_banner(ip, port, host):
 
         banner = sock.recv(1024).decode(errors="replace").strip()
         label = classify_banner(banner)
-        print(f"    Banner: {label}")
-        
-        
+        print(f"    [{port}] Banner: {label}")
 
     except TimeoutError:
-        print("    Banner: No automatic response")
+        print(f"    [{port}] Banner: No automatic response")
 
     except OSError as error:
-        print(f"    Banner error: {error}")
+        print(f"    [{port}] Banner error: {error}")
 
     finally:
         sock.close()
