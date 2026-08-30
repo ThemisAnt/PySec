@@ -20,16 +20,16 @@ from banner_grabber import grab_banner
 from http_client import http_request
 
 
-def analyze_service(ip, port, host):
+def analyze_service(ip, port, host, results, lock):
 
     if port == 22:
-        grab_banner(ip, port, host)
+        grab_banner(ip, port, host, results, lock)
 
     elif port == 80:
         return "http"
     
     else:
-        grab_banner(ip, port, host)
+        grab_banner(ip, port, host, results, lock)
 
 
 
@@ -45,7 +45,7 @@ def scan_one_port(ip, port, host, results, lock):
 
         with lock:
             results.append({"port": port, "status": "open", "service": service})
-        analyze_service(ip, port, host)
+        analyze_service(ip, port, host, results, lock)
 
     else:
         print(f"[CLOSED/FILTERED] {port}")
